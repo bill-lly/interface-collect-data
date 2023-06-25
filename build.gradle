@@ -1,0 +1,185 @@
+
+plugins {
+	id 'org.springframework.boot' version '2.6.6'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+//	id 'checkstyle'
+	id 'application'
+	id  'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+apply plugin: 'idea'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+group = 'com.robot.gs'
+version = '0.0.1-SNAPSHOT'
+mainClassName = 'com.robot.gs.Application'
+
+// endregion
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	maven { url "https://maven.aliyun.com/repository/public" }
+	maven {
+		url = uri('https://nexus.gs-robot.com/repository/releases')
+		allowInsecureProtocol = true
+		credentials {
+			username = nexusUser
+			password = nexusPassword
+		}
+		mavenContent {
+			releasesOnly()
+		}
+	}
+	maven {
+		url = uri('https://nexus.gs-robot.com/repository/snapshots')
+		allowInsecureProtocol = true
+		credentials {
+			username = nexusUser
+			password = nexusPassword
+		}
+		mavenContent {
+			snapshotsOnly()
+		}
+	}
+	mavenCentral()
+}
+
+
+// region packageVersion
+ext {
+	javaVersion = '8'
+	mysqlConnectorVersion = '8.0.28'
+	mapstructVersion = '1.4.2.Final'
+
+	bootVersion = '2.6.6'
+	lombokVersion = '1.18.22'
+	qosLogbackVersion = "1.2.7"
+	logstashLogbackEncoderVersion = "6.6"
+}
+
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+
+shadowJar {
+	zip64     true
+	baseName 'shadow-udesk-integration'
+	classifier = null
+	version = null
+	configurations = [project.configurations.runtimeClasspath]
+	relocate 'okio', 'shadow.okio'
+}
+dependencies {
+	//spring
+	implementation "org.springframework.boot:spring-boot:${bootVersion}"
+	implementation "org.springframework.boot:spring-boot-autoconfigure:${bootVersion}"
+//	implementation "org.springframework.boot:spring-boot-starter:${bootVersion}"
+
+
+	// mapstruct
+	implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+	annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+	testAnnotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
+	// define any required OkHttp artifacts without version
+	implementation "com.squareup.okhttp3:okhttp:4.9.3"
+	implementation "com.squareup.okio:okio:2.8.0"
+
+	//log
+	implementation "net.logstash.logback:logstash-logback-encoder:${logstashLogbackEncoderVersion}"
+	implementation "ch.qos.logback:logback-core:${qosLogbackVersion}"
+	implementation "ch.qos.logback:logback-access:${qosLogbackVersion}"
+	implementation "ch.qos.logback:logback-classic:${qosLogbackVersion}"
+
+
+	compileOnly "org.projectlombok:lombok:${lombokVersion}"
+	annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+	implementation 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+	testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+	testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+	implementation 'org.apache.commons:commons-lang3:3.12.0'
+	implementation 'com.google.guava:guava:31.1-jre'
+	implementation 'org.apache.hive:hive-jdbc:3.1.2'
+	implementation 'com.google.code.gson:gson:2.9.0'
+	implementation 'commons-cli:commons-cli:1.5.0'
+	implementation 'com.atlassian.jira:jira-rest-java-client-app:5.2.0'
+	// https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2
+	implementation group: 'com.alibaba.fastjson2', name: 'fastjson2', version: '2.0.19'
+	implementation 'mysql:mysql-connector-java:8.0.31'
+
+}
+
+// endregion
+
+// region checkstyle
+//checkstyle {
+//	toolVersion = '8.12'
+//	ignoreFailures = false
+//	maxErrors = 0
+//	maxWarnings = 0
+//	configFile = file("${project.rootDir}/checkstyle.xml")
+//	checkstyleMain {
+//		source ='src/main/java'
+//	}
+//
+//	checkstyleTest {
+//		source ='src/test/java'
+//	}
+//}
+// endregion
+
+
+
+// region sourceSet
+sourceSets {
+	main {
+		java {
+			srcDirs 'src/main/java'
+			srcDirs 'build/generated-src/jooq'
+		}
+		resources {
+			srcDir 'src/main/resources'
+			srcDir 'config'
+		}
+	}
+	test {
+		java {
+			srcDir 'src/test/java'
+		}
+		resources {
+			srcDir 'src/test/resources'
+			srcDir 'db-schema'
+		}
+	}
+
+}
+// endregion
+
+
+run.classpath = sourceSets.main.runtimeClasspath
+
+distTar.enabled = false
+distZip.enabled = false
+shadowDistZip.enabled = false
+shadowDistTar.enabled = false
+
+
+// https://discuss.gradle.org/t/gradle-7-fail-for-duplicates-in-copy-specs-has-no-duplicates-in-project/39834
+rootProject.tasks.named("processResources") {
+	duplicatesStrategy = 'include'
+}
+
+rootProject.tasks.named("processTestResources") {
+	duplicatesStrategy = 'include'
+}
+
